@@ -24,6 +24,7 @@ router.get('/', (req, res) => {
   res.json(result);
 });
 
+// use transactions to avoid data inconsistency
 router.post('/', (req, res) => {
   const { name, tag_number, breed, date_of_birth, paddock_id } = req.body;
 
@@ -31,18 +32,38 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'name and tag_number are required' });
   }
 
-  if (paddock_id) {
-    db.prepare(
-      'UPDATE paddocks SET animal_count = animal_count + 1 WHERE id = ?'
-    ).run(paddock_id);
+  try {
+    db.exec('BEGIN');
+    
+    if (paddock_id) {
+      db.prepare(
+        'UPDATE paddocks SET animal_count = animal_count + 1 WHERE id = ?'
+      ).run(paddock_id);
+    }
+
+    const result = db.prepare(`
+      INSERT INTO animals (name, tag_number, breed, date_of_birth, paddock_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      name,
+      tag_number,
+      breed ?? null,
+      date_of_birth ?? null,
+      paddock_id ?? null
+    );
+
+    db.exec('COMMIT');
+
+    const animal = db.prepare(
+      'SELECT * FROM animals WHERE id = ?'
+    ).get(result.lastInsertRowid);
+
+    res.status(201).json(animal);
+
+  } catch (err) {
+    db.exec('ROLLBACK');
+    res.status(500).json({ error: 'Failed to create animal' });
   }
-
-  const result = db.prepare(
-    'INSERT INTO animals (name, tag_number, breed, date_of_birth, paddock_id) VALUES (?, ?, ?, ?, ?)'
-  ).run(name, tag_number, breed ?? null, date_of_birth ?? null, paddock_id ?? null);
-
-  const animal = db.prepare('SELECT * FROM animals WHERE id = ?').get(result.lastInsertRowid);
-  res.json(animal);
 });
 
 router.get('/:id', (req, res) => {
