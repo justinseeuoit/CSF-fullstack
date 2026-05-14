@@ -45,62 +45,76 @@
     const LIMIT = 5;
 
     async function loadAnimals() {
-      const animals = await api.get(`/animals?page=${currentPage}&limit=${LIMIT}`);
       const tbody = document.getElementById('animals-body');
 
-      tbody.innerHTML = ''; // changed to avoid XSS vulnerability
+      try {
+        const animals = await api.get(`/animals?page=${currentPage}&limit=${LIMIT}`);
 
-      if (!animals.length) {
-        const row = document.createElement('tr');
-        const cell = document.createElement('td');
+        tbody.innerHTML = '';
 
-        cell.colSpan = 6;
-        cell.className = 'empty';
-        cell.textContent = 'No animals found.';
+        if (!Array.isArray(animals) || !animals.length) {
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
 
-        row.appendChild(cell);
-        tbody.appendChild(row);
+          cell.colSpan = 6;
+          cell.className = 'empty';
+          cell.textContent = 'No animals found.';
 
-        document.getElementById('next-btn').disabled = true;
-        return;
-      }
+          row.appendChild(cell);
+          tbody.appendChild(row);
 
-      animals.forEach(a => {
-        const row = document.createElement('tr');
 
-        const event = a.latest_health_event
-          ? `${a.latest_health_event.event_type} (${a.latest_health_event.date})`
-          : '—';
+          document.getElementById('next-btn').disabled = true;
+          return;
+        }
 
-        const values = [
-          a.tag_number,
-          a.name,
-          a.breed ?? '—',
-          a.paddock_id ?? '—',
-          event
-        ];
+        animals.forEach(a => {
+          const row = document.createElement('tr');
 
-        values.forEach(value => {
-          const td = document.createElement('td');
-          td.textContent = value;
-          row.appendChild(td);
+          const event = a.latest_health_event
+            ? `${a.latest_health_event.event_type} (${a.latest_health_event.date})`
+            : '—';
+
+          const values = [
+            a.tag_number,
+            a.name,
+            a.breed ?? '—',
+            a.paddock_id ?? '—',
+            event
+          ];
+
+          values.forEach(value => {
+            const td = document.createElement('td');
+            td.textContent = value;
+            row.appendChild(td);
+          });
+
+          const actionTd = document.createElement('td');
+          const link = document.createElement('a');
+
+          link.href = `animal-detail.html?id=${encodeURIComponent(a.id)}`;
+          link.textContent = 'View';
+
+          actionTd.appendChild(link);
+          row.appendChild(actionTd);
+
+          tbody.appendChild(row);
         });
 
-        const actionTd = document.createElement('td');
-        const link = document.createElement('a');
+        document.getElementById('page-info').textContent = `Page ${currentPage + 1}`;
+        document.getElementById('prev-btn').disabled = currentPage === 0;
+        document.getElementById('next-btn').disabled = animals.length < LIMIT;
 
-        link.href = `animal-detail.html?id=${encodeURIComponent(a.id)}`;
-        link.textContent = 'View';
-
-        actionTd.appendChild(link);
-        row.appendChild(actionTd);
-
-        tbody.appendChild(row);
-      });
-
-      document.getElementById('page-info').textContent = `Page ${currentPage + 1}`;
-      document.getElementById('prev-btn').disabled = currentPage === 0;
-      document.getElementById('next-btn').disabled = animals.length < LIMIT;
+      } catch (err) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty">
+              Failed to load animals. Please try again.
+            </td>
+          </tr>
+        `;
+        document.getElementById('next-btn').disabled = true;
+      }
     }
 
     function changePage(dir) {

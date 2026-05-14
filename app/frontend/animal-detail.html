@@ -50,51 +50,67 @@
     const animalId = params.get('id');
 
     async function load() {
-      const animal = await api.get(`/animals/${animalId}`);
+      try {
+        const animal = await api.get(`/animals/${animalId}`);
 
-      document.title = `${animal.name} — FarmTracker`;
+        document.title = `${animal.name} — FarmTracker`;
 
-      const container = document.getElementById('animal-detail');
-      container.innerHTML = ''; // changed to avoid XSS vulnerability
+        const container = document.getElementById('animal-detail');
+        container.innerHTML = '';
 
-      const header = document.createElement('div');
-      header.className = 'animal-header';
+        const header = document.createElement('div');
+        header.className = 'animal-header';
 
-      const h2 = document.createElement('h2');
-      h2.textContent = animal.name;
+        const h2 = document.createElement('h2');
+        h2.textContent = animal.name;
 
-      const tag = document.createElement('span');
-      tag.className = 'tag';
-      tag.textContent = animal.tag_number;
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = animal.tag_number;
 
-      h2.appendChild(tag);
-      header.appendChild(h2);
+        h2.appendChild(tag);
+        header.appendChild(h2);
 
-      const dl = document.createElement('dl');
+        const dl = document.createElement('dl');
 
-      const fields = [
-        ['Breed', animal.breed ?? '—'],
-        ['Date of Birth', animal.date_of_birth ?? '—'],
-        ['Paddock', animal.paddock_id ?? 'Unassigned']
-      ];
+        const fields = [
+          ['Breed', animal.breed ?? '—'],
+          ['Date of Birth', animal.date_of_birth ?? '—'],
+          ['Paddock', animal.paddock_id ?? 'Unassigned']
+        ];
 
-      fields.forEach(([label, value]) => {
-        const dt = document.createElement('dt');
-        dt.textContent = label;
+        fields.forEach(([label, value]) => {
+          const dt = document.createElement('dt');
+          dt.textContent = label;
 
-        const dd = document.createElement('dd');
-        dd.textContent = value;
+          const dd = document.createElement('dd');
+          dd.textContent = value;
 
-        dl.appendChild(dt);
-        dl.appendChild(dd);
-      });
+          dl.appendChild(dt);
+          dl.appendChild(dd);
+        });
 
-      container.appendChild(header);
-      container.appendChild(dl);
+        container.appendChild(header);
+        container.appendChild(dl);
 
-      document.getElementById('health-section').style.display = 'block';
+        document.getElementById('health-section').style.display = 'block';
 
-      await loadEvents();
+        await loadEvents();
+
+      } catch (err) {
+        // added try catch to handle 404 errors
+        const container = document.getElementById('animal-detail');
+
+        container.innerHTML = `
+          <div class="error">
+            <h2>Animal not found</h2>
+            <p>This animal may have been deleted or the link is invalid.</p>
+            <a href="animals.html">← Back to Animals</a>
+          </div>
+        `;
+
+        document.getElementById('health-section').style.display = 'none';
+      }
     }
 
     async function loadEvents() {

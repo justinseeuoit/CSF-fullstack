@@ -25,51 +25,63 @@
   <script src="app.js"></script>
   <script>
     async function loadPaddocks() {
-      const paddocks = await api.get('/paddocks');
       const grid = document.getElementById('paddocks-grid');
 
-      grid.innerHTML = ''; // changed to avoid XSS vulnerability
+      try {
+        const paddocks = await api.get('/paddocks');
 
-      if (!paddocks.length) {
-        const empty = document.createElement('p');
-        empty.className = 'empty';
-        empty.textContent = 'No paddocks found.';
-        grid.appendChild(empty);
-        return;
+        grid.innerHTML = '';
+
+        if (!Array.isArray(paddocks) || !paddocks.length) {
+          const empty = document.createElement('p');
+          empty.className = 'empty';
+          empty.textContent = 'No paddocks found.';
+          grid.appendChild(empty);
+          return;
+        }
+
+        paddocks.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          const title = document.createElement('h3');
+          title.textContent = p.name;
+
+          const stat = document.createElement('p');
+          stat.className = 'stat';
+          stat.textContent = `${p.animal_count} / ${p.capacity} animals`;
+
+          const bar = document.createElement('div');
+          bar.className = 'capacity-bar';
+
+          const fill = document.createElement('div');
+          fill.className = 'capacity-fill';
+
+          const percentage =
+            p.capacity > 0
+              ? Math.min(100, Math.round((p.animal_count / p.capacity) * 100))
+              : 0;
+
+
+          fill.style.width = `${percentage}%`;
+
+          bar.appendChild(fill);
+
+          card.appendChild(title);
+          card.appendChild(stat);
+          card.appendChild(bar);
+
+          grid.appendChild(card);
+        });
+
+      } catch (err) {
+        grid.innerHTML = `
+          <div class="error">
+            <h2>Failed to load paddocks</h2>
+            <p>Please try refreshing the page.</p>
+          </div>
+        `;
       }
-
-      paddocks.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'card';
-
-        const title = document.createElement('h3');
-        title.textContent = p.name;
-
-        const stat = document.createElement('p');
-        stat.className = 'stat';
-        stat.textContent = `${p.animal_count} / ${p.capacity} animals`;
-
-        const bar = document.createElement('div');
-        bar.className = 'capacity-bar';
-
-        const fill = document.createElement('div');
-        fill.className = 'capacity-fill';
-
-        const percentage =
-          p.capacity > 0
-          ? Math.min(100, Math.round((p.animal_count / p.capacity) * 100))
-          : 0;
-
-        fill.style.width = `${percentage}%`;
-
-        bar.appendChild(fill);
-
-        card.appendChild(title);
-        card.appendChild(stat);
-        card.appendChild(bar);
-
-        grid.appendChild(card);
-      });
     }
 
     loadPaddocks();
