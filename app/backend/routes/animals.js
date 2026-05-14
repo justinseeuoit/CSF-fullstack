@@ -72,6 +72,7 @@ router.get('/:id', (req, res) => {
   res.json(animal);
 });
 
+// atomic updates for paddocks
 router.put('/:id', (req, res) => {
   const animal = db.prepare('SELECT * FROM animals WHERE id = ?').get(req.params.id);
   if (!animal) return res.status(404).json({ error: 'Animal not found' });
@@ -84,41 +85,75 @@ router.put('/:id', (req, res) => {
     paddock_id:    'paddock_id' in req.body ? req.body.paddock_id : animal.paddock_id,
   };
 
-  if (updates.paddock_id !== animal.paddock_id) {
-    if (animal.paddock_id) { // reduce animal count in old paddock to avoid data drift
-      db.prepare(
-        'UPDATE paddocks SET animal_count = animal_count - 1 WHERE id = ?'
-      ).run(animal.paddock_id);
+  try {
+    db.exec('BEGIN');
+
+    if (updates.paddock_id !== animal.paddock_id) {
+      if (animal.paddock_id) {
+        db.prepare(
+          'UPDATE paddocks SET animal_count = animal_count - 1 WHERE id = ?'
+        ).run(animal.paddock_id);
+      }
+
+      if (updates.paddock_id) {
+        db.prepare(
+          'UPDATE paddocks SET animal_count = animal_count + 1 WHERE id = ?'
+        ).run(updates.paddock_id);
+      }
     }
-    if (updates.paddock_id) {
-      db.prepare(
-        'UPDATE paddocks SET animal_count = animal_count + 1 WHERE id = ?'
-      ).run(updates.paddock_id);
-    }
+
+
+    db.prepare(`
+      UPDATE animals
+      SET name = ?, tag_number = ?, breed = ?, date_of_birth = ?, paddock_id = ?
+      WHERE id = ?
+    `).run(
+      updates.name,
+      updates.tag_number,
+      updates.breed,
+      updates.date_of_birth,
+      updates.paddock_id,
+      req.params.id
+    );
+
+    db.exec('COMMIT');
+
+    const updated = db.prepare(
+      'SELECT * FROM animals WHERE id = ?'
+    ).get(req.params.id);
+
+    res.json(updated);
+
+  } catch (err) {
+    db.exec('ROLLBACK');
+    res.status(500).json({ error: 'Failed to update animal' });
   }
-
-  db.prepare(`
-    UPDATE animals
-    SET name = ?, tag_number = ?, breed = ?, date_of_birth = ?, paddock_id = ?
-    WHERE id = ?
-  `).run(updates.name, updates.tag_number, updates.breed, updates.date_of_birth, updates.paddock_id, req.params.id);
-
-  const updated = db.prepare('SELECT * FROM animals WHERE id = ?').get(req.params.id);
-  res.json(updated);
 });
 
+// consistency for paddock updates
 router.delete('/:id', (req, res) => {
   const animal = db.prepare('SELECT * FROM animals WHERE id = ?').get(req.params.id);
   if (!animal) return res.status(404).json({ error: 'Animal not found' });
 
-  if (animal.paddock_id) {
-    db.prepare(
-      'UPDATE paddocks SET animal_count = animal_count - 1 WHERE id = ?'
-    ).run(animal.paddock_id);
-  }
+  try {
+    db.exec('BEGIN');
 
-  db.prepare('DELETE FROM animals WHERE id = ?').run(req.params.id);
-  res.json({ message: 'deleted' });
+    if (animal.paddock_id) {
+      db.prepare(
+        'UPDATE paddocks SET animal_count = animal_count - 1 WHERE id = ?'
+      ).run(animal.paddock_id);
+    }
+
+    db.prepare('DELETE FROM animals WHERE id = ?').run(req.params.id);
+
+    db.exec('COMMIT');
+
+    res.json({ message: 'deleted' });
+
+  } catch (err) {
+    db.exec('ROLLBACK');
+    res.status(500).json({ error: 'Failed to delete animal' });
+  }
 });
 
 router.get('/:id/health-events', (req, res) => {
