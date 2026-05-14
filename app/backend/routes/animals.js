@@ -6,20 +6,35 @@ router.get('/', (req, res) => {
   const page = parseInt(req.query.page) || 0;
   const limit = parseInt(req.query.limit) || 10;
 
-  const offset = page * limit;
-  const animals = db.prepare(
-    'SELECT * FROM animals LIMIT ? OFFSET ?'
-  ).all(limit, offset); // added offset so pages scroll based on offset, not 1 at a time
+  const offset = page * limit; // added offset so pages scroll based on offset, not 1 at a time
 
-  const result = animals.map(animal => {
-    const latestEvent = db.prepare(`
-      SELECT * FROM health_events
-      WHERE animal_id = ?
-      ORDER BY date DESC
-      LIMIT 1
-    `).get(animal.id);
-    return { ...animal, latest_health_event: latestEvent ?? null };
-  });
+  // changed query to run once, instead of once per animal
+  const animals = db.prepare(`
+    SELECT 
+      a.*,
+      (
+        SELECT json_object(
+          'event_type', h.event_type,
+          'date', h.date,
+          'vet_name', h.vet_name,
+          'notes', h.notes
+        )
+        FROM health_events h
+        WHERE h.animal_id = a.id
+        ORDER BY h.date DESC
+        LIMIT 1
+      ) AS latest_health_event
+    FROM animals a
+    LIMIT ? OFFSET ?
+  `).all(limit, offset); // added offset so pages scroll based on offset, not 1 at a time
+
+  // SQLite returns JSON as string -> convert it
+  const result = animals.map(a => ({
+    ...a,
+    latest_health_event: a.latest_health_event
+      ? JSON.parse(a.latest_health_event)
+      : null
+  }));
 
   res.json(result);
 });
@@ -114,7 +129,7 @@ router.put('/:id', (req, res) => {
       return res.status(400).json({ error: 'Paddock is full' });
     }
   }
-  
+
   try {
     db.exec('BEGIN');
 
