@@ -138,12 +138,6 @@ router.delete('/:id', (req, res) => {
   try {
     db.exec('BEGIN');
 
-    if (animal.paddock_id) {
-      db.prepare(
-        'UPDATE paddocks SET animal_count = animal_count - 1 WHERE id = ?'
-      ).run(animal.paddock_id);
-    }
-
     db.prepare('DELETE FROM animals WHERE id = ?').run(req.params.id);
 
     db.exec('COMMIT');
