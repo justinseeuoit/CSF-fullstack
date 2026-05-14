@@ -108,3 +108,43 @@ test('POST /api/animals/:id/health-events creates an event', async () => {
   assert.equal(body.event_type, 'checkup');
   assert.equal(body.animal_id, id);
 });
+
+// test: create weight
+test('POST /api/animals/:id/weights creates a weight record', async () => {
+  const { body: animals } = await get('/animals?page=0&limit=1');
+  const id = animals[0].id;
+
+  const { status, body } = await post(`/animals/${id}/weights`, {
+    weight_kg: 50.5,
+    date: '2025-01-01',
+    notes: 'initial weigh-in',
+  });
+
+  assert.equal(status, 201);
+  assert.equal(body.weight_kg, 50.5);
+  assert.equal(body.animal_id, id);
+});
+
+// test invalid weight
+test('POST /api/animals/:id/weights rejects invalid weight', async () => {
+  const { body: animals } = await get('/animals?page=0&limit=1');
+  const id = animals[0].id;
+
+  const { status } = await post(`/animals/${id}/weights`, {
+    weight_kg: -5,
+    date: '2025-01-01',
+  });
+
+  assert.equal(status, 422);
+});
+
+// test list weights
+test('GET /api/animals/:id/weights returns array', async () => {
+  const { body: animals } = await get('/animals?page=0&limit=1');
+  const id = animals[0].id;
+
+  const { status, body } = await get(`/animals/${id}/weights`);
+
+  assert.equal(status, 200);
+  assert.ok(Array.isArray(body));
+});
