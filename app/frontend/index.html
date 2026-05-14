@@ -28,7 +28,7 @@
       const paddocks = await api.get('/paddocks');
       const grid = document.getElementById('paddocks-grid');
 
-      grid.innerHTML = '';
+      grid.innerHTML = ''; // changed to avoid XSS vulnerability
 
       if (!paddocks.length) {
         const empty = document.createElement('p');

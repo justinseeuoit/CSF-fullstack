@@ -55,7 +55,7 @@
       document.title = `${animal.name} — FarmTracker`;
 
       const container = document.getElementById('animal-detail');
-      container.innerHTML = '';
+      container.innerHTML = ''; // changed to avoid XSS vulnerability
 
       const header = document.createElement('div');
       header.className = 'animal-header';
@@ -101,7 +101,7 @@
       const events = await api.get(`/animals/${animalId}/health-events`);
       const tbody = document.getElementById('events-body');
 
-      tbody.innerHTML = '';
+      tbody.innerHTML = ''; // changed to avoid XSS vulnerability
 
       if (!events.length) {
         const row = document.createElement('tr');

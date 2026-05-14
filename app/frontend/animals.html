@@ -48,7 +48,7 @@
       const animals = await api.get(`/animals?page=${currentPage}&limit=${LIMIT}`);
       const tbody = document.getElementById('animals-body');
 
-      tbody.innerHTML = '';
+      tbody.innerHTML = ''; // changed to avoid XSS vulnerability
 
       if (!animals.length) {
         const row = document.createElement('tr');

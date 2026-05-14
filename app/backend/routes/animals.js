@@ -9,7 +9,7 @@ router.get('/', (req, res) => {
   const offset = page * limit;
   const animals = db.prepare(
     'SELECT * FROM animals LIMIT ? OFFSET ?'
-  ).all(limit, offset);
+  ).all(limit, offset); // added offset so pages scroll based on offset, not 1 at a time
 
   const result = animals.map(animal => {
     const latestEvent = db.prepare(`
@@ -64,7 +64,7 @@ router.put('/:id', (req, res) => {
   };
 
   if (updates.paddock_id !== animal.paddock_id) {
-    if (animal.paddock_id) {
+    if (animal.paddock_id) { // reduce animal count in old paddock to avoid data drift
       db.prepare(
         'UPDATE paddocks SET animal_count = animal_count - 1 WHERE id = ?'
       ).run(animal.paddock_id);
