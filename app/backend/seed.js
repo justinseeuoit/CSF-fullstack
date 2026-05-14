@@ -1,3 +1,10 @@
+const allowedEnvs = ['development', 'test'];
+
+if (!allowedEnvs.includes(process.env.NODE_ENV)) {
+  console.error(`Seed blocked in NODE_ENV=${process.env.NODE_ENV}`);
+  process.exit(1);
+}
+
 const { db, initDb } = require('./db');
 
 initDb();

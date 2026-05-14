@@ -30,3 +30,15 @@ if (require.main === module) {
 
 module.exports = app;
 module.exports.start = start;
+
+app.use('/api/animals', animalsRouter);
+app.use('/api/paddocks', paddocksRouter);
+
+// global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+  });
+});
