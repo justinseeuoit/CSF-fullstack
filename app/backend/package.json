@@ -1,0 +1,14 @@
+{
+  "name": "farmtracker",
+  "version": "1.0.0",
+  "description": "FarmTracker — livestock record management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "dev": "node --no-warnings --watch server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
