@@ -31,6 +31,21 @@ router.post('/', (req, res) => {
   if (!name || !tag_number) {
     return res.status(400).json({ error: 'name and tag_number are required' });
   }
+  
+  // validate paddock exists and capacity
+  if (paddock_id) {
+    const paddock = db.prepare(
+      'SELECT id, animal_count, capacity FROM paddocks WHERE id = ?'
+    ).get(paddock_id);
+
+    if (!paddock) {
+      return res.status(400).json({ error: 'Invalid paddock_id' });
+    }
+
+    if (paddock.animal_count >= paddock.capacity) {
+      return res.status(400).json({ error: 'Paddock is full' });
+    }
+  }
 
   try {
     db.exec('BEGIN');
@@ -85,6 +100,21 @@ router.put('/:id', (req, res) => {
     paddock_id:    'paddock_id' in req.body ? req.body.paddock_id : animal.paddock_id,
   };
 
+  // validate new paddock exists and validate capacity before moving
+  if (updates.paddock_id && updates.paddock_id !== animal.paddock_id) {
+    const paddock = db.prepare(
+      'SELECT id, animal_count, capacity FROM paddocks WHERE id = ?'
+    ).get(updates.paddock_id);
+
+    if (!paddock) {
+      return res.status(400).json({ error: 'Invalid paddock_id' });
+    }
+
+    if (paddock.animal_count >= paddock.capacity) {
+      return res.status(400).json({ error: 'Paddock is full' });
+    }
+  }
+  
   try {
     db.exec('BEGIN');
 
